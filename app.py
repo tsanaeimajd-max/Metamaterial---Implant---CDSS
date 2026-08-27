@@ -1,102 +1,102 @@
+# app.py
+import streamlit as st
+import numpy as np
 import pandas as pd
+import plotly.graph_objects as go
 
-class OrthopedicImplantCDSS:
-    """
-    Commercial-Grade Clinical Decision Support System (CDSS) 
-    for Patient-Specific Metamaterial Femoral Implants.
-    """
-    def __init__(self, csv_filepath=None):
-        if csv_filepath:
-            self.df = pd.read_csv(csv_filepath)
-        else:
-            self.data = {
-                'Cross_Section': ['Circular', 'Circular', 'Circular', 'Circular', 
-                                  'Elliptical', 'Elliptical', 'Elliptical', 'Elliptical', 
-                                  'Trapezoidal', 'Trapezoidal', 'Trapezoidal', 'Trapezoidal'],
-                'Architecture': ['Solid', 'Diamond', 'Gyroid', 'Hybrid', 
-                                 'Solid', 'Diamond', 'Gyroid', 'Hybrid', 
-                                 'Solid', 'Diamond', 'Gyroid', 'Hybrid'],
-                'U_max': [1.181, 3.11, 4.21, 3.53, 1.444, 3.45, 4.76, 3.89, 1.703, 4.11, 6.48, 4.62],
-                'Stiffness_K': [1948, 740, 546, 652, 1594, 667, 483, 591, 1351, 560, 355, 498],
-                'FoS_350': [None, 4.13, 4.96, 5.30, None, 3.75, 3.10, 2.82, None, 3.75, 3.87, 3.26]
-            }
-            self.df = pd.DataFrame(self.data)
+# Page Configuration
+st.set_page_config(
+    page_title="CDSS - Metamaterial Femoral Implants",
+    page_icon="🦴",
+    layout="wide"
+)
 
-    def evaluate_patient_case(self, patient_weight_kg, bone_condition, activity_level, baseline_weight=75):
-        load_factor = patient_weight_kg / baseline_weight
-        working_df = self.df.copy()
-        
-        working_df['U_max_dynamic'] = working_df['U_max'] * load_factor
-        working_df['FoS_dynamic'] = working_df['FoS_350'] / load_factor
-        
-        meta_df = working_df[working_df['Architecture'] != 'Solid'].dropna(subset=['FoS_dynamic']).copy()
-        
-        norm_fos = meta_df['FoS_dynamic'] / meta_df['FoS_dynamic'].max()
-        norm_stiffness = meta_df['Stiffness_K'] / meta_df['Stiffness_K'].max()
-        
-        if bone_condition == 1:  
-            meta_df['Clinical_Score'] = (0.4 * norm_fos) + (0.6 * norm_stiffness)
-        else:                    
-            norm_compliance = meta_df['U_max_dynamic'] / meta_df['U_max_dynamic'].max()
-            meta_df['Clinical_Score'] = (0.4 * norm_fos) + (0.6 * norm_compliance)
-            
-        if activity_level == 1:
-            meta_df.loc[meta_df['FoS_dynamic'] < 3.5, 'Clinical_Score'] *= 0.5
-            
-        top_recommendations = meta_df.sort_values(by='Clinical_Score', ascending=False).head(3)
-        return top_recommendations
+# App Header
+st.title("🦴 Clinical Decision Support System (CDSS)")
+st.subheader("Automated Comprehensive Matrix: Cross-Sections & Hybrid Metamaterials")
+st.markdown("---")
 
-    def generate_clinical_report(self, patient_info, top_results):
-        report = []
-        report.append("=" * 65)
-        report.append("       MEDICAL DEVICE SOFTWARE: CERTIFIED CLINICAL REPORT")
-        report.append("=" * 65)
-        report.append(f" Patient Weight: {patient_info['weight']} kg")
-        report.append(f" Bone Pathology: {'Osteoporotic/Weak' if patient_info['bone'] == 1 else 'Normal Stock'}")
-        report.append(f" Activity Profile: {'High Performance' if patient_info['activity'] == 1 else 'Standard/Normal'}")
-        report.append("-" * 65)
-        report.append(" TOP 3 RECOMMENDED PATIENT-SPECIFIC IMPLANT CONFIGURATIONS:")
-        report.append("-" * 65)
+# --- پایگاه داده کامل پروژه ---
+@st.cache_data
+def load_full_fea_database():
+    data = [
+        # Circular Cross-Section
+        {"Cross-Section": "Circular", "Architecture": "Hybrid (Radial Gradient Core)", "Stiffness_Base": 15.8, "FoS": 3.7, "Stress_Shielding": "Optimal (Low)"},
+        {"Cross-Section": "Circular", "Architecture": "Gyroid (TPMS)", "Stiffness_Base": 14.5, "FoS": 3.4, "Stress_Shielding": "Low"},
+        {"Cross-Section": "Circular", "Architecture": "Diamond (TPMS)", "Stiffness_Base": 18.0, "FoS": 3.9, "Stress_Shielding": "Moderate"},
+        {"Cross-Section": "Circular", "Architecture": "Solid Standard (Control)", "Stiffness_Base": 110.0, "FoS": 5.2, "Stress_Shielding": "High"},
         
-        rank = 1
-        for _, row in top_results.iterrows():
-            report.append(f" [{rank}] Geometry: {row['Cross_Section']} | Architecture: {row['Architecture']}")
-            report.append(f"     • Displacement (U): {row['U_max_dynamic']:.2f} mm | Stiffness: {row['Stiffness_K']} N/mm")
-            report.append(f"     • Safety Factor (FoS): {row['FoS_dynamic']:.2f} | Match Index: {row['Clinical_Score']:.2f}")
-            report.append("-" * 65)
-            rank += 1
-            
-        report.append(" Status: Approved for Pre-Surgical Planning and CAD Generation.")
-        report.append("=" * 65)
-        return "\n".join(report)
+        # Elliptical Cross-Section
+        {"Cross-Section": "Elliptical", "Architecture": "Hybrid (Radial Gradient Core)", "Stiffness_Base": 16.7, "FoS": 3.6, "Stress_Shielding": "Optimal (Low)"},
+        {"Cross-Section": "Elliptical", "Architecture": "Gyroid (TPMS)", "Stiffness_Base": 15.3, "FoS": 3.3, "Stress_Shielding": "Low"},
+        {"Cross-Section": "Elliptical", "Architecture": "Diamond (TPMS)", "Stiffness_Base": 19.1, "FoS": 3.8, "Stress_Shielding": "Moderate"},
+        {"Cross-Section": "Elliptical", "Architecture": "Solid Standard (Control)", "Stiffness_Base": 118.0, "FoS": 5.0, "Stress_Shielding": "High"},
 
-# ==========================================
-# Interactive Execution Block
-# ==========================================
-if __name__ == "__main__":
-    cdss_engine = OrthopedicImplantCDSS()
+        # Trapezoidal Cross-Section
+        {"Cross-Section": "Trapezoidal", "Architecture": "Hybrid (Radial Gradient Core)", "Stiffness_Base": 17.5, "FoS": 3.5, "Stress_Shielding": "Optimal (Low)"},
+        {"Cross-Section": "Trapezoidal", "Architecture": "Gyroid (TPMS)", "Stiffness_Base": 16.0, "FoS": 3.2, "Stress_Shielding": "Low"},
+        {"Cross-Section": "Trapezoidal", "Architecture": "Diamond (TPMS)", "Stiffness_Base": 20.2, "FoS": 3.7, "Stress_Shielding": "Moderate"},
+        {"Cross-Section": "Trapezoidal", "Architecture": "Solid Standard (Control)", "Stiffness_Base": 125.0, "FoS": 4.8, "Stress_Shielding": "High"}
+    ]
+    return pd.DataFrame(data)
+
+df_raw = load_full_fea_database()
+
+# Sidebar for Patient Profile Only
+st.sidebar.header("📋 Patient Clinical Profile")
+patient_weight = st.sidebar.slider("Patient Body Weight (kg)", 40.0, 140.0, 75.0, 1.0)
+bone_condition = st.sidebar.selectbox("Bone Pathology / Density", ["Healthy / Normal", "Osteopenia", "Osteoporosis"])
+
+# Clinical Factor Adjustments
+pathology_factor = {"Healthy / Normal": 1.0, "Osteopenia": 0.8, "Osteoporosis": 0.58}[bone_condition]
+weight_ratio = patient_weight / 75.0
+
+# Process all data dynamically
+df_processed = df_raw.copy()
+df_processed['Effective Stiffness (GPa)'] = round(df_processed['Stiffness_Base'] * pathology_factor * weight_ratio, 2)
+df_processed['Safety Factor'] = round(df_processed['FoS'], 2)
+
+# MCDM Suitability Score Calculation
+target_stiffness = 20.0
+scores = []
+for idx, row in df_processed.iterrows():
+    stiff = row['Effective Stiffness (GPa)']
+    shield = row['Stress_Shielding']
     
-    print("=" * 65)
-    print("     COMMERCIAL CLINICAL DECISION SUPPORT SYSTEM (CDSS)")
-    print("=" * 65)
+    stiff_penalty = abs(stiff - target_stiffness) * 2.2
+    shield_penalty = 35 if "High" in shield else (0 if "Optimal" in shield else 10)
+    score = max(0.0, round(100.0 - stiffness_penalty - shield_penalty, 1))
+    scores.append(score)
+
+df_processed['MCDM Suitability Score'] = scores
+
+df_processed['Configuration'] = df_processed['Cross-Section'] + " - " + df_processed['Architecture']
+df_display = df_processed[['Configuration', 'Cross-Section', 'Architecture', 'Effective Stiffness (GPa)', 'Stress_Shielding', 'Safety Factor', 'MCDM Suitability Score']].sort_values(by='MCDM Suitability Score', ascending=False).reset_index(drop=True)
+
+# Main Dashboard Layout
+col1, col2 = st.columns([1.3, 1])
+
+with col1:
+    st.markdown("### 📊 Comprehensive MCDM Ranking Matrix (All Configurations)")
+    st.dataframe(df_display[['Configuration', 'Effective Stiffness (GPa)', 'Stress_Shielding', 'Safety Factor', 'MCDM Suitability Score']], use_container_width=True)
     
-    try:
-        weight_input = float(input("Enter patient body weight in kg (e.g., 80): "))
-        bone_input = int(input("Select bone condition -> [1] Osteoporotic/Weak  [2] Healthy/Normal: "))
-        activity_input = int(input("Select patient activity -> [1] High Activity  [2] Normal: "))
-    except ValueError:
-        print("Invalid input detected! Using default profile (Weight: 75kg, Normal bone, Normal activity).")
-        weight_input = 75
-        bone_input = 2
-        activity_input = 2
-        
-    current_patient = {'weight': weight_input, 'bone': bone_input, 'activity': activity_input}
-    
-    results = cdss_engine.evaluate_patient_case(
-        patient_weight_kg=current_patient['weight'], 
-        bone_condition=current_patient['bone'], 
-        activity_level=current_patient['activity']
+    best_row = df_display.iloc[0]
+    st.success(f"🌟 **Overall Global Recommendation:** The optimal configuration is **{best_row['Configuration']}** with an MCDM Score of **{best_row['MCDM Suitability Score']}**.")
+
+with col2:
+    st.markdown("### 📈 Top Configurations Comparison Chart")
+    top_5 = df_display.head(5)
+    fig = go.Figure()
+    fig.add_trace(go.Bar(
+        x=top_5['Configuration'],
+        y=top_5['Effective Stiffness (GPa)'],
+        marker_color=['#2E86C1', '#28B463', '#F39C12', '#9B59B6', '#E74C3C']
+    ))
+    fig.update_layout(
+        xaxis_title="Implant Configuration",
+        yaxis_title="Effective Stiffness (GPa)",
+        template="plotly_white",
+        height=380,
+        xaxis_tickangle=-30
     )
-    
-    final_report = cdss_engine.generate_clinical_report(current_patient, results)
-    print("\n" + final_report)
+    st.plotly_chart(fig, use_container_width=True)
