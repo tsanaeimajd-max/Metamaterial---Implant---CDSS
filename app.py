@@ -1,4 +1,3 @@
-# app.py
 import streamlit as st
 import numpy as np
 import pandas as pd
@@ -16,7 +15,7 @@ st.title("🦴 Clinical Decision Support System (CDSS)")
 st.subheader("Automated Comprehensive Matrix: Cross-Sections & Hybrid Metamaterials")
 st.markdown("---")
 
-# --- پایگاه داده کامل پروژه ---
+# --- پایگاه داده کامل پروژه (بدون نیاز به انتخاب دستی مقطع) ---
 @st.cache_data
 def load_full_fea_database():
     data = [
@@ -25,7 +24,7 @@ def load_full_fea_database():
         {"Cross-Section": "Circular", "Architecture": "Gyroid (TPMS)", "Stiffness_Base": 14.5, "FoS": 3.4, "Stress_Shielding": "Low"},
         {"Cross-Section": "Circular", "Architecture": "Diamond (TPMS)", "Stiffness_Base": 18.0, "FoS": 3.9, "Stress_Shielding": "Moderate"},
         {"Cross-Section": "Circular", "Architecture": "Solid Standard (Control)", "Stiffness_Base": 110.0, "FoS": 5.2, "Stress_Shielding": "High"},
-        
+
         # Elliptical Cross-Section
         {"Cross-Section": "Elliptical", "Architecture": "Hybrid (Radial Gradient Core)", "Stiffness_Base": 16.7, "FoS": 3.6, "Stress_Shielding": "Optimal (Low)"},
         {"Cross-Section": "Elliptical", "Architecture": "Gyroid (TPMS)", "Stiffness_Base": 15.3, "FoS": 3.3, "Stress_Shielding": "Low"},
@@ -56,20 +55,21 @@ df_processed = df_raw.copy()
 df_processed['Effective Stiffness (GPa)'] = round(df_processed['Stiffness_Base'] * pathology_factor * weight_ratio, 2)
 df_processed['Safety Factor'] = round(df_processed['FoS'], 2)
 
-# MCDM Suitability Score Calculation
+# MCDM Suitability Score Calculation based on target cortical bone stiffness (approx 20 GPa)
 target_stiffness = 20.0
 scores = []
 for idx, row in df_processed.iterrows():
     stiff = row['Effective Stiffness (GPa)']
     shield = row['Stress_Shielding']
-    
+
     stiff_penalty = abs(stiff - target_stiffness) * 2.2
     shield_penalty = 35 if "High" in shield else (0 if "Optimal" in shield else 10)
-    score = max(0.0, round(100.0 - stiffness_penalty - shield_penalty, 1))
+    score = max(0.0, round(100.0 - stiff_penalty - shield_penalty, 1))
     scores.append(score)
 
 df_processed['MCDM Suitability Score'] = scores
 
+# Combine Cross-Section and Architecture for display label and sort by score
 df_processed['Configuration'] = df_processed['Cross-Section'] + " - " + df_processed['Architecture']
 df_display = df_processed[['Configuration', 'Cross-Section', 'Architecture', 'Effective Stiffness (GPa)', 'Stress_Shielding', 'Safety Factor', 'MCDM Suitability Score']].sort_values(by='MCDM Suitability Score', ascending=False).reset_index(drop=True)
 
@@ -79,7 +79,7 @@ col1, col2 = st.columns([1.3, 1])
 with col1:
     st.markdown("### 📊 Comprehensive MCDM Ranking Matrix (All Configurations)")
     st.dataframe(df_display[['Configuration', 'Effective Stiffness (GPa)', 'Stress_Shielding', 'Safety Factor', 'MCDM Suitability Score']], use_container_width=True)
-    
+
     best_row = df_display.iloc[0]
     st.success(f"🌟 **Overall Global Recommendation:** The optimal configuration is **{best_row['Configuration']}** with an MCDM Score of **{best_row['MCDM Suitability Score']}**.")
 
